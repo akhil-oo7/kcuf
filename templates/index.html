@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Content Moderator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #141e30, #243b55);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    input[type="file"] {
+      margin: 1rem 0;
+    }
+    button {
+      background-color: #1abc9c;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #16a085;
+    }
+    .results {
+      margin-top: 1rem;
+      text-align: left;
+    }
+    .safe {
+      color: #2ecc71;
+      font-weight: bold;
+    }
+    .unsafe {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .loader {
+      margin-top: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="glass">
+    <h1>Video Content Moderator</h1>
+    <form id="uploadForm">
+      <input type="file" id="videoInput" name="video" accept="video/*" required>
+      <br>
+      <button type="submit">Analyze Video</button>
+    </form>
+    <div class="loader" id="loader">Analyzing...</div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const resultsDiv = document.getElementById('results');
+    const loader = document.getElementById('loader');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      resultsDiv.innerHTML = '';
+      loader.style.display = 'block';
+
+      const formData = new FormData(form);
+      const response = await fetch('/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      loader.style.display = 'none';
+
+      if (data.error) {
+        resultsDiv.innerHTML = `<p class="unsafe">Error: ${data.error}</p>`;
+        return;
+      }
+
+      const statusClass = data.status === "SAFE" ? "safe" : "unsafe";
+      const statusMsg = `
+        <p class="${statusClass}">Status: ${data.status}</p>
+        <p>Total Frames: ${data.total_frames}</p>
+        <p>Unsafe Frames: ${data.unsafe_frames}</p>
+        <p>Unsafe Percentage: ${data.unsafe_percentage.toFixed(2)}%</p>
+        <p>Highest Confidence: ${(data.confidence * 100).toFixed(2)}%</p>
+      `;
+
+      let details = '';
+      if (data.details.length > 0) {
+        details = '<h4>Flagged Frames:</h4><ul>';
+        data.details.forEach(d => {
+          details += `<li>Frame ${d.frame}: ${d.reason} – ${(d.confidence * 100).toFixed(2)}% confidence</li>`;
+        });
+        details += '</ul>';
+      }
+
+      resultsDiv.innerHTML = statusMsg + details;
+    });
+  </script>
+</body>
+</html>
