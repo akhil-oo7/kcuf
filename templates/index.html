@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Content Moderation</title>
+    <style>
+        :root {
+            --primary-color: #4a6bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --text-color: #333;
+            --light-gray: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            font-weight: 600;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 2rem;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            background-color: var(--light-gray);
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(74, 107, 255, 0.05);
+        }
+
+        .upload-section h2 {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 1rem;
+        }
+
+        .file-input-label:hover {
+            background-color: #3a5bef;
+            transform: translateY(-2px);
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #3a5bef;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            padding: 1.2rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .status.safe {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .status.unsafe {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .status.processing {
+            background-color: rgba(74, 107, 255, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(74, 107, 255, 0.2);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: var(--light-gray);
+            border-radius: 4px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .results {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: var(--light-gray);
+            border-radius: 8px;
+        }
+
+        .results h2 {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .confidence {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 1rem 0;
+            color: var(--primary-color);
+        }
+
+        .stats {
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .details {
+            margin-top: 1.5rem;
+        }
+
+        .frame-detail {
+            background-color: white;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .frame-detail:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .upload-section {
+                padding: 1.5rem;
+            }
+
+            .file-input-label, button {
+                width: 100%;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video Content Moderation</h1>
+        
+        <div class="upload-section">
+            <h2>Upload Video</h2>
+            <label for="videoInput" class="file-input-label">Choose File</label>
+            <input type="file" id="videoInput" accept="video/*">
+            <button onclick="analyzeVideo()">Analyze Video</button>
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar"></div>
+        </div>
+        
+        <div class="result-section" id="resultSection">
+            <h2>Analysis Results</h2>
+            <div class="status" id="status"></div>
+            <div class="confidence" id="confidence"></div>
+            <div class="stats" id="stats"></div>
+            <div class="details" id="details"></div>
+        </div>
+    </div>
+
+    <script>
+        function analyzeVideo() {
+            const fileInput = document.getElementById('videoInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a video file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            // Show progress bar
+            document.querySelector('.progress').style.display = 'block';
+            document.querySelector('.progress-bar').style.width = '0%';
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide progress bar
+                document.querySelector('.progress').style.display = 'none';
+
+                // Show results
+                const resultSection = document.getElementById('resultSection');
+                resultSection.style.display = 'block';
+
+                // Update status
+                const status = document.getElementById('status');
+                status.textContent = `Video Status: ${data.status}`;
+                status.className = `status ${data.status.toLowerCase()}`;
+
+                // Update confidence
+                document.getElementById('confidence').textContent = 
+                    `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+
+                // Update stats
+                document.getElementById('stats').textContent = 
+                    `Analyzed ${data.total_frames} frames. ` +
+                    (data.unsafe_frames > 0 ? 
+                        `${data.unsafe_frames} unsafe frames (${data.unsafe_percentage.toFixed(1)}%)` : 
+                        'No unsafe content detected.');
+
+                // Update details
+                const details = document.getElementById('details');
+                details.innerHTML = '';
+                
+                if (data.details.length > 0) {
+                    data.details.forEach(detail => {
+                        const frameDetail = document.createElement('div');
+                        frameDetail.className = 'frame-detail';
+                        frameDetail.innerHTML = `
+                            <strong>Frame ${detail.frame}:</strong><br>
+                            Reason: ${detail.reason}<br>
+                            Confidence: ${(detail.confidence * 100).toFixed(1)}%
+                        `;
+                        details.appendChild(frameDetail);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while analyzing the video');
+            });
+        }
+    </script>
+</body>
+</html> 
