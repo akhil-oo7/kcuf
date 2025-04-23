@@ -90,39 +90,51 @@
       resultsDiv.innerHTML = '';
       loader.style.display = 'block';
 
-      const formData = new FormData(form);
-      const response = await fetch('/analyze', {
-        method: 'POST',
-        body: formData
-      });
+      try {
+        const formData = new FormData(form);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
 
-      const data = await response.json();
-      loader.style.display = 'none';
-
-      if (data.error) {
-        resultsDiv.innerHTML = `<p class="unsafe">Error: ${data.error}</p>`;
-        return;
-      }
-
-      const statusClass = data.status === "SAFE" ? "safe" : "unsafe";
-      const statusMsg = `
-        <p class="${statusClass}">Status: ${data.status}</p>
-        <p>Total Frames: ${data.total_frames}</p>
-        <p>Unsafe Frames: ${data.unsafe_frames}</p>
-        <p>Unsafe Percentage: ${data.unsafe_percentage.toFixed(2)}%</p>
-        <p>Highest Confidence: ${(data.confidence * 100).toFixed(2)}%</p>
-      `;
-
-      let details = '';
-      if (data.details.length > 0) {
-        details = '<h4>Flagged Frames:</h4><ul>';
-        data.details.forEach(d => {
-          details += `<li>Frame ${d.frame}: ${d.reason} – ${(d.confidence * 100).toFixed(2)}% confidence</li>`;
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
         });
-        details += '</ul>';
-      }
 
-      resultsDiv.innerHTML = statusMsg + details;
+        clearTimeout(timeoutId);
+        loader.style.display = 'none';
+
+        const data = await response.json();
+        console.log("Analysis response:", data); // Debug log
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<p class="unsafe">Error: ${data.error}. Try a smaller video (under 30MB, 20s).</p>`;
+          return;
+        }
+
+        const statusClass = data.status === "SAFE" ? "safe" : "unsafe";
+        const statusMsg = `
+          <p class="${statusClass}">Status: ${data.status}</p>
+          <p>Total Frames: ${data.total_frames}</p>
+          <p>Unsafe Frames: ${data.unsafe_frames}</p>
+          <p>Unsafe Percentage: ${data.unsafe_percentage.toFixed(2)}%</p>
+          <p>Highest Confidence: ${(data.confidence * 100).toFixed(2)}%</p>
+        `;
+
+        let details = '';
+        if (data.details.length > 0) {
+          details = '<h4>Flagged Frames:</h4><ul>';
+          data.details.forEach(d => {
+            details += `<li>Frame ${d.frame}: ${d.reason} – ${(d.confidence * 100).toFixed(2)}% confidence</li>`;
+          });
+          details += '</ul>';
+        }
+
+        resultsDiv.innerHTML = statusMsg + details;
+      } catch (err) {
+        loader.style.display = 'none';
+        resultsDiv.innerHTML = `<p class="unsafe">Error: ${err.message || 'Analysis failed. Try a smaller video (under 30MB, 20s).'}</p>`;
+      }
     });
   </script>
 </body>
