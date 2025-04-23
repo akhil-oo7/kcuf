@@ -6,7 +6,6 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -15,17 +14,15 @@ class VideoFrameDataset(Dataset):
         self.frames = frames
         self.labels = labels
         self.feature_extractor = feature_extractor
-    
+
     def __len__(self):
         return len(self.frames)
-    
+
     def __getitem__(self, idx):
         frame = self.frames[idx]
         label = self.labels[idx]
-        
         image = Image.fromarray(frame)
         inputs = self.feature_extractor(image, return_tensors="pt")
-        
         return {
             'pixel_values': inputs['pixel_values'].squeeze(),
             'label': torch.tensor(label, dtype=torch.long)
@@ -36,11 +33,11 @@ class ContentModerator:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Using device: {self.device}")
         self.model_name = model_name
-        self.threshold = float(os.environ.get("VIOLENCE_THRESHOLD", 0.6))  # Increased threshold
-        
+        self.threshold = float(os.environ.get("VIOLENCE_THRESHOLD", 0.6))
+
         logger.info(f"Loading feature extractor for {model_name}")
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
-        
+
         if train_mode:
             logger.info("Initializing model for training")
             self.model = AutoModelForImageClassification.from_pretrained(
@@ -59,31 +56,31 @@ class ContentModerator:
                 num_labels=2
             ).to(self.device)
             self.model.eval()
-    
+
     def analyze_frames(self, frames):
         logger.info(f"Analyzing {len(frames)} frames")
         results = []
-        
-        dataset = VideoFrameDataset(frames, [0] * len(frames), self.feature_extractor)
-        dataloader = DataLoader(dataset, batch_size=8)
-        
-        self.model.eval()
-        with torch.no_grad():
-            for batch in dataloader:
-                pixel_values = batch['pixel_values'].to(self.device)
-                outputs = self.model(pixel_values)
-                predictions = torch.softmax(outputs.logits, dim=1)
-                
-                for pred in predictions:
-                    violence_prob = pred[1].item()
-                    flagged = violence_prob > self.threshold
-                    
-                    results.append({
-                        'flagged': flagged,
-                        'reason': "Detected violence" if flagged else "No inappropriate content detected",
-                        'confidence': violence_prob if flagged else 1 - violence_prob
-                    })
-                    logger.debug(f"Frame violence prob: {violence_prob}, Flagged: {flagged}")
-        
+        try:
+            dataset = VideoFrameDataset(frames, [0] * len(frames), self.feature_extractor)
+            dataloader = DataLoader(dataset, batch_size=8)
+            with torch.no_grad():
+                for batch in dataloader:
+                    pixel_values = batch['pixel_values'].to(self.device)
+                    outputs = self.model(pixel_values)
+                    predictions = torch.softmax(outputs.logits, dim=1)
+
+                    for pred in predictions:
+                        violence_prob = pred[1].item()
+                        flagged = violence_prob > self.threshold
+                        results.append({
+                            'flagged': flagged,
+                            'reason': "Detected violence" if flagged else "No inappropriate content detected",
+                            'confidence': violence_prob if flagged else 1 - violence_prob
+                        })
+                        logger.debug(f"Frame prob: {violence_prob}, Flagged: {flagged}")
+        except Exception as e:
+            logger.error(f"Model inference error: {e}")
+            raise
+
         logger.info("Frame analysis completed")
         return results
