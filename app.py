@@ -49,11 +49,9 @@ def analyze_video():
     logger.info(f"File saved at {filepath}")
 
     try:
-        # Extract frames
         frames = video_processor.extract_frames(filepath)
         results = content_moderator.analyze_frames(frames)
 
-        # Analyze and prepare the response
         unsafe_frames = [r for r in results if r['flagged']]
         total_frames = len(results)
         results = results[:50]  # truncate for UI
@@ -92,12 +90,6 @@ def analyze_video():
         return jsonify({'error': f"Unexpected error: {e}"}), 500
 
 if __name__ == '__main__':
-    # Force CPU usage to avoid GPU/segmentation faults.
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    
-    # Configure port and debug mode
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("DEBUG", "False") == "True"
-    
-    # Run the Flask app
     app.run(host='0.0.0.0', port=port, debug=debug_mode)

@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 class VideoProcessor:
-    def __init__(self, frame_interval=150, target_size=(224, 224), max_frames=1):  # set to 1 for testing
+    def __init__(self, frame_interval=150, target_size=(224, 224), max_frames=50):
         self.frame_interval = frame_interval
         self.target_size = target_size
         self.max_frames = max_frames
@@ -31,11 +31,12 @@ class VideoProcessor:
                     try:
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         frame_resized = cv2.resize(frame_rgb, self.target_size)
+                        # Normalize to match ResNet-50 expectations
                         frame_normalized = frame_resized / 255.0
                         frame_normalized = (frame_normalized - np.array([0.485, 0.456, 0.406])) / np.array([0.229, 0.224, 0.225])
-                        frames.append((frame_normalized * 255).astype(np.uint8))
+                        frames.append((frame_normalized * 255).astype(np.uint8))  # Convert back to uint8
                     except Exception as e:
-                        print(f"Error processing frame {frame_count}: {e}")
+                        print(f"Error processing frame {frame_count}: {str(e)}")
                         continue
 
                 frame_count += 1
