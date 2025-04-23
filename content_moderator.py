@@ -50,14 +50,19 @@ class ContentModerator:
             ).to(self.device)
         else:
             model_path = os.path.join("models", "best_model")
-            logger.info(f"Loading trained model from {model_path}")
-            if not os.path.exists(model_path):
-                logger.error(f"Model not found at {model_path}")
-                raise FileNotFoundError(f"Model not found at {model_path}. Please ensure models/best_model exists.")
-            self.model = AutoModelForImageClassification.from_pretrained(
-                model_path,
-                num_labels=2
-            ).to(self.device)
+            logger.info(f"Checking for trained model at {model_path}")
+            if os.path.exists(model_path):
+                logger.info("Loading trained model")
+                self.model = AutoModelForImageClassification.from_pretrained(
+                    model_path,
+                    num_labels=2
+                ).to(self.device)
+            else:
+                logger.info("Falling back to Hugging Face model")
+                self.model = AutoModelForImageClassification.from_pretrained(
+                    "akhil11y/video-content-moderator",
+                    num_labels=2
+                ).to(self.device)
             self.model.eval()
     
     def analyze_frames(self, frames):
