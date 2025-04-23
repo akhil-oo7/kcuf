@@ -18,7 +18,6 @@ class VideoDataset:
         self.frame_interval = frame_interval
         self.video_processor = VideoProcessor(frame_interval)
         
-        # Get all video files
         self.violence_videos = [os.path.join(violence_dir, f) for f in os.listdir(violence_dir) 
                               if f.endswith(('.mp4', '.avi', '.mov'))]
         self.nonviolence_videos = [os.path.join(nonviolence_dir, f) for f in os.listdir(nonviolence_dir) 
@@ -40,22 +39,20 @@ class VideoDataset:
         frames = []
         labels = []
         
-        # Process violent videos
         for video_path in tqdm(self.violence_videos[:max_videos_per_class], desc="Processing violent videos"):
             try:
                 video_frames = self.video_processor.extract_frames(video_path)
                 frames.extend(video_frames)
-                labels.extend([1] * len(video_frames))  # 1 for violent
+                labels.extend([1] * len(video_frames))
             except Exception as e:
                 print(f"Error processing {video_path}: {str(e)}")
         
-        # Process non-violent videos
         for video_path in tqdm(self.nonviolence_videos[:max_videos_per_class], desc="Processing non-violent videos"):
             try:
                 video_frames = self.video_processor.extract_frames(video_path)
                 frames.extend(video_frames)
-                labels.extend([0] * len(video_frames))  # 0 for non-violent
+                labels.extend([0] * len(video_frames))
             except Exception as e:
                 print(f"Error processing {video_path}: {str(e)}")
         
-        return np.array(frames), np.array(labels) 
+        return np.array(frames), np.array(labels)

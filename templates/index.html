@@ -5,9 +5,7 @@
   <title>Video Content Moderator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       padding: 0;
@@ -34,9 +32,7 @@
       width: 100%;
       text-align: center;
     }
-    input[type="file"] {
-      margin: 1rem 0;
-    }
+    input[type="file"] { margin: 1rem 0; }
     button {
       background-color: #1abc9c;
       border: none;
@@ -47,25 +43,11 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-    button:hover {
-      background-color: #16a085;
-    }
-    .results {
-      margin-top: 1rem;
-      text-align: left;
-    }
-    .safe {
-      color: #2ecc71;
-      font-weight: bold;
-    }
-    .unsafe {
-      color: #e74c3c;
-      font-weight: bold;
-    }
-    .loader {
-      margin-top: 1rem;
-      display: none;
-    }
+    button:hover { background-color: #16a085; }
+    .results { margin-top: 1rem; text-align: left; }
+    .safe { color: #2ecc71; font-weight: bold; }
+    .unsafe { color: #e74c3c; font-weight: bold; }
+    .loader { margin-top: 1rem; display: none; }
   </style>
 </head>
 <body>
@@ -93,7 +75,7 @@
       try {
         const formData = new FormData(form);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000);
+        const timeoutId = setTimeout(() => controller.abort(), 300000);
 
         const response = await fetch('/analyze', {
           method: 'POST',
@@ -104,11 +86,12 @@
         clearTimeout(timeoutId);
         loader.style.display = 'none';
 
-        const data = await response.json();
-        console.log("Analysis response:", data); // Debug log
+        const text = await response.text();
+        if (!text) throw new Error('Empty response');
 
+        const data = JSON.parse(text);
         if (data.error) {
-          resultsDiv.innerHTML = `<p class="unsafe">Error: ${data.error}. Try a smaller video (under 30MB, 20s).</p>`;
+          resultsDiv.innerHTML = `<p class="unsafe">Error: ${data.error}</p>`;
           return;
         }
 
@@ -125,7 +108,7 @@
         if (data.details.length > 0) {
           details = '<h4>Flagged Frames:</h4><ul>';
           data.details.forEach(d => {
-            details += `<li>Frame ${d.frame}: ${d.reason} – ${(d.confidence * 100).toFixed(2)}% confidence</li>`;
+            details += `<li>Frame ${d.frame}: ${d.reason} – ${(d.confidence * 100).toFixed(2)}%</li>`;
           });
           details += '</ul>';
         }
@@ -133,7 +116,7 @@
         resultsDiv.innerHTML = statusMsg + details;
       } catch (err) {
         loader.style.display = 'none';
-        resultsDiv.innerHTML = `<p class="unsafe">Error: ${err.message || 'Analysis failed. Try a smaller video (under 30MB, 20s).'}</p>`;
+        resultsDiv.innerHTML = `<p class="unsafe">Error: ${err.message}</p>`;
       }
     });
   </script>

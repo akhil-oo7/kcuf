@@ -1,11 +1,14 @@
-from transformers import pipeline, AutoModelForImageClassification, AutoFeatureExtractor
+from transformers import AutoModelForImageClassification, AutoFeatureExtractor
 import torch
 from PIL import Image
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from tqdm import tqdm
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class VideoFrameDataset(Dataset):
     def __init__(self, frames, labels, feature_extractor):
@@ -20,10 +23,7 @@ class VideoFrameDataset(Dataset):
         frame = self.frames[idx]
         label = self.labels[idx]
         
-        # Convert numpy array to PIL Image
         image = Image.fromarray(frame)
-        
-        # Preprocess the image
         inputs = self.feature_extractor(image, return_tensors="pt")
         
         return {
@@ -33,53 +33,39 @@ class VideoFrameDataset(Dataset):
 
 class ContentModerator:
     def __init__(self, model_name="microsoft/resnet-50", train_mode=False):
-        """
-        Initialize the ContentModerator with a pre-trained model.
-        
-        Args:
-            model_name (str): Name of the pre-trained model to use
-            train_mode (bool): Whether to initialize in training mode
-        """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Using device: {self.device}")
         self.model_name = model_name
+        self.threshold = float(os.environ.get("VIOLENCE_THRESHOLD", 0.6))  # Increased threshold
         
-        # Always use feature extractor
+        logger.info(f"Loading feature extractor for {model_name}")
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
         
         if train_mode:
+            logger.info("Initializing model for training")
             self.model = AutoModelForImageClassification.from_pretrained(
                 model_name,
-                num_labels=2,  # Binary classification: violent vs non-violent
+                num_labels=2,
                 ignore_mismatched_sizes=True
             ).to(self.device)
         else:
-            # Load our trained model
             model_path = os.path.join("models", "best_model")
-            if os.path.exists(model_path):
-                print("Loading trained model...")
-                self.model = AutoModelForImageClassification.from_pretrained(
-                    model_path,
-                    num_labels=2
-                ).to(self.device)
-                self.model.eval()  # Set to evaluation mode
-            else:
-                raise FileNotFoundError("Trained model not found. Please train the model first.")
+            logger.info(f"Loading trained model from {model_path}")
+            if not os.path.exists(model_path):
+                logger.error(f"Model not found at {model_path}")
+                raise FileNotFoundError(f"Model not found at {model_path}. Please ensure models/best_model exists.")
+            self.model = AutoModelForImageClassification.from_pretrained(
+                model_path,
+                num_labels=2
+            ).to(self.device)
+            self.model.eval()
     
     def analyze_frames(self, frames):
-        """
-        Analyze frames for inappropriate content.
-        
-        Args:
-            frames (list): List of video frames as numpy arrays
-            
-        Returns:
-            list: List of analysis results for each frame
-        """
+        logger.info(f"Analyzing {len(frames)} frames")
         results = []
         
-        # Convert frames to dataset
         dataset = VideoFrameDataset(frames, [0] * len(frames), self.feature_extractor)
-        dataloader = DataLoader(dataset, batch_size=32)
+        dataloader = DataLoader(dataset, batch_size=8)
         
         self.model.eval()
         with torch.no_grad():
@@ -89,15 +75,15 @@ class ContentModerator:
                 predictions = torch.softmax(outputs.logits, dim=1)
                 
                 for pred in predictions:
-                    # Get probability of violence (class 1)
                     violence_prob = pred[1].item()
-                    # Lower threshold for violence detection
-                    flagged = violence_prob > 0.3  # Changed from 0.5 to 0.3
+                    flagged = violence_prob > self.threshold
                     
                     results.append({
                         'flagged': flagged,
                         'reason': "Detected violence" if flagged else "No inappropriate content detected",
                         'confidence': violence_prob if flagged else 1 - violence_prob
                     })
+                    logger.debug(f"Frame violence prob: {violence_prob}, Flagged: {flagged}")
         
-        return results 
+        logger.info("Frame analysis completed")
+        return results
